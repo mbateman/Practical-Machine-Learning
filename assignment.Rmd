@@ -27,7 +27,7 @@ A number of steps can be taken to clean up the data:
   training <- training[, colSums(is.na(training)) == 0] 
 ```
 - Remove superfluous variables. 
-Superfluous variables can be removed as they are unlikely to be related to a dependent variable.
+Superfluous variables can be removed as they are unlikely to be related to the dependent variable classe:
 
 ```{r}
 superfluous = c('X', 'user_name', 'raw_timestamp_part_1', 'raw_timestamp_part_2', 'cvtd_timestamp', 'new_window', 'num_window')
@@ -43,7 +43,6 @@ The next step is to remove the highly correlated variables using the cor and fin
 ```{r}
 highlyCorrelated <- cor(na.omit(training[sapply(training, is.numeric)]))
 dim(highlyCorrelated)
-
 correlations <- findCorrelation(highlyCorrelated, cutoff = .90)
 training = training[,-correlations]
 dim(training)
