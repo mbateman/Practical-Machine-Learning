@@ -1,0 +1,81 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Michael Bateman"
+date: "21 September 2015"
+output: html_document
+---
+###Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+###Data Load
+```{r}
+testingOriginal <- read.csv("pml-testing.csv", header=TRUE, na.strings=c("", "NA", "NULL"))
+training <- read.csv("pml-training.csv", header=TRUE, na.strings=c("", "NA", "NULL"))
+```
+###Load Libraries
+```{r}
+library(caret)
+library(randomForest)
+```
+###Data Cleaning
+
+A number of steps can be taken to clean up the data:
+
+- Remove columns with NA values:
+```{r}
+  training <- training[, colSums(is.na(training)) == 0] 
+```
+- Remove superfluous variables. 
+Superfluous variables can be removed as they are unlikely to be related to the dependent variable classe:
+
+```{r}
+superfluous = c('X', 'user_name', 'raw_timestamp_part_1', 'raw_timestamp_part_2', 'cvtd_timestamp', 'new_window', 'num_window')
+training <- training[, -which(names(training) %in% superfluous)]
+```
+This allows the removal of low variance variables which do not make good predictors with the caret function nearZeroVar:
+```{r}
+lowVariance= nearZeroVar(training[sapply(training, is.numeric)], saveMetrics = TRUE)
+training = training[, lowVariance[, 'nzv']==0]
+dim(training)
+```
+The next step is to remove the highly correlated variables using the cor and findCorrelation functions:
+```{r}
+highlyCorrelated <- cor(na.omit(training[sapply(training, is.numeric)]))
+dim(highlyCorrelated)
+correlations <- findCorrelation(highlyCorrelated, cutoff = .90)
+training = training[,-correlations]
+dim(training)
+```
+###Data Partitioning
+
+The next step is to partition data into training and testing collections for cross validation purposes:
+
+```{r}
+trainingPart <- createDataPartition(y=training$classe, p=0.7, list=FALSE)
+testing <- training[-trainingPart,]
+training <- training[trainingPart,]
+dim(training)
+dim(testing)
+```
+As they show low variance a random forest approach is tried out below to see how well it performs.
+```{r}
+rf = randomForest(classe~.,data=training,ntree=100, importance=TRUE)
+rf
+```
+
+The prediction result below shows the estimate to be very close:
+
+```{r}
+predictions = predict(rf,testing,type="class")
+predictionsDf = with(testing,table(predictions,classe))
+sum(diag(predictionsDf))/sum(as.vector(predictionsDf))
+```
+
+###Conclusion
+The accuracy of the above prediction ensures that the random forest constructed earlier is sufficient to predict the results against the original test data:
+
+```{r}
+answers <- predict(rf, testingOriginal)
+answers
+```
