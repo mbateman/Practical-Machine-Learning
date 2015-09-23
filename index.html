@@ -85,16 +85,20 @@ training &lt;- read.csv(&quot;pml-training.csv&quot;, header=TRUE, na.strings=c(
 </ul>
 <pre class="r"><code>  training &lt;- training[, colSums(is.na(training)) == 0] </code></pre>
 <ul>
-<li>Remove superfluous variables. Superfluous variables can be removed as they are unlikely to be related to a dependent variable.</li>
+<li>Remove superfluous variables. Superfluous variables can be removed as they are unlikely to be related to the dependent variable classe:</li>
 </ul>
 <pre class="r"><code>superfluous = c('X', 'user_name', 'raw_timestamp_part_1', 'raw_timestamp_part_2', 'cvtd_timestamp', 'new_window', 'num_window')
 training &lt;- training[, -which(names(training) %in% superfluous)]</code></pre>
-<p>This allows the removal of low variance variables which do not make good predictors with the caret function nearZeroVar:</p>
+<ul>
+<li>Remove low variance variables This leads on to the removal of low variance variables which do not make good predictors with the caret function nearZeroVar:</li>
+</ul>
 <pre class="r"><code>lowVariance= nearZeroVar(training[sapply(training, is.numeric)], saveMetrics = TRUE)
 training = training[, lowVariance[, 'nzv']==0]
 dim(training)</code></pre>
 <pre><code>## [1] 19622    53</code></pre>
-<p>The next step is to remove the highly correlated variables using the cor and findCorrelation functions:</p>
+<ul>
+<li>The next step is to remove the highly correlated variables using the cor and findCorrelation functions:</li>
+</ul>
 <pre class="r"><code>highlyCorrelated &lt;- cor(na.omit(training[sapply(training, is.numeric)]))
 dim(highlyCorrelated)</code></pre>
 <pre><code>## [1] 52 52</code></pre>
@@ -102,7 +106,10 @@ dim(highlyCorrelated)</code></pre>
 training = training[,-correlations]
 dim(training)</code></pre>
 <pre><code>## [1] 19622    46</code></pre>
-<p>The next step is to partition data into training and testing collections for cross validation purposes:</p>
+</div>
+<div id="data-partitioning" class="section level3">
+<h3>Data Partitioning</h3>
+<p>Following on from this is the partitioning of the data into training and testing collections for cross validation purposes:</p>
 <pre class="r"><code>trainingPart &lt;- createDataPartition(y=training$classe, p=0.7, list=FALSE)
 testing &lt;- training[-trainingPart,]
 training &lt;- training[trainingPart,]
@@ -110,7 +117,7 @@ dim(training)</code></pre>
 <pre><code>## [1] 13737    46</code></pre>
 <pre class="r"><code>dim(testing)</code></pre>
 <pre><code>## [1] 5885   46</code></pre>
-<p>As they show low variance a random forest approach is tried out below to see how well it performs.</p>
+<p>As they show low variance a random forest approach seems a good choice. How well it performs can be seen below:</p>
 <pre class="r"><code>rf = randomForest(classe~.,data=training,ntree=100, importance=TRUE)
 rf</code></pre>
 <pre><code>## 
@@ -120,19 +127,19 @@ rf</code></pre>
 ##                      Number of trees: 100
 ## No. of variables tried at each split: 6
 ## 
-##         OOB estimate of  error rate: 0.66%
+##         OOB estimate of  error rate: 0.71%
 ## Confusion matrix:
 ##      A    B    C    D    E  class.error
-## A 3903    2    0    0    1 0.0007680492
-## B   19 2630    9    0    0 0.0105342363
-## C    0   14 2380    2    0 0.0066777963
-## D    0    0   31 2218    3 0.0150976909
-## E    0    0    4    5 2516 0.0035643564</code></pre>
+## A 3904    1    0    0    1 0.0005120328
+## B   17 2627   14    0    0 0.0116629044
+## C    0   23 2369    4    0 0.0112687813
+## D    0    0   28 2222    2 0.0133214920
+## E    0    0    3    5 2517 0.0031683168</code></pre>
 <p>The prediction result below shows the estimate to be very close:</p>
 <pre class="r"><code>predictions = predict(rf,testing,type=&quot;class&quot;)
 predictionsDf = with(testing,table(predictions,classe))
 sum(diag(predictionsDf))/sum(as.vector(predictionsDf))</code></pre>
-<pre><code>## [1] 0.9947324</code></pre>
+<pre><code>## [1] 0.9949023</code></pre>
 </div>
 <div id="conclusion" class="section level3">
 <h3>Conclusion</h3>
